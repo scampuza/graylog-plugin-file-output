@@ -2,9 +2,12 @@
 
 [![Build Status](https://travis-ci.org/scampuza.svg?branch=master)](https://travis-ci.org/scampuza)
 
-__Use this paragraph to enter a description of your plugin.__
 
 **Required Graylog version:** 2.0 and later
+
+This Plugin has a very specific purpose:  Write the messages to an Output plain file, indicated in the Plugin configuration parameters.
+
+
 
 Installation
 ------------
@@ -16,21 +19,14 @@ and can be configured in your `graylog.conf` file.
 
 Restart `graylog-server` and you are done.
 
-Development
------------
-
-You can improve your development experience for the web interface part of your plugin
-dramatically by making use of hot reloading. To do this, do the following:
-
-* `git clone https://github.com/Graylog2/graylog2-server.git`
-* `cd graylog2-server/graylog2-web-interface`
-* `ln -s $YOURPLUGIN plugin/`
-* `npm install && npm start`
 
 Usage
 -----
 
-__Use this paragraph to document the usage of your plugin__
+Once you have installed the plugin, you can configure an Output of type  com.webcat.FileOutput, with this two simple parameters:
+
+file_name: File to be created in which the messages will be written to.
+output_folder: Absolute path of the folder in which the file will be written.
 
 
 Getting started

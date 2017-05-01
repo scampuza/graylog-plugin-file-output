@@ -11,6 +11,7 @@ import org.graylog2.plugin.streams.Stream;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.StringTokenizer;
 import java.util.Map.Entry;
 import java.util.logging.Level;
@@ -19,6 +20,14 @@ import java.util.logging.Logger;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.File;
+
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.Date;
+
+import org.apache.commons.io.FileUtils;
+
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -35,8 +44,14 @@ public class FileOutput implements MessageOutput{
 
     private boolean shutdown;
 
-    private String output_folder;
-    private String file_name;
+    static private String output_folder;
+    static private String file_name;
+    static private BufferedWriter bw;
+    static private String full_file_name;
+    static private File file;
+    static private Integer flush_time;
+    static private String messageBuffer;
+    static private Timer timer;
 
 
     @Inject
@@ -44,8 +59,15 @@ public class FileOutput implements MessageOutput{
 
         output_folder = conf.getString("output_folder");
         file_name = conf.getString("file_name");
+        full_file_name = this.output_folder + "/" + this.file_name ; //+ "_" + dateString;
+        file = new File(full_file_name);
+        flush_time = Integer.getInteger(conf.getString("flush_time"));
         shutdown = false;
+        bw = null;
+        messageBuffer="";
 
+        timer = new Timer();
+        timer.scheduleAtFixedRate(new WriteBuffer(), 0, flush_time * 1000);
 
     }
 
@@ -74,33 +96,22 @@ public class FileOutput implements MessageOutput{
             return;
         }
 
-        String dateString = null;
-        SimpleDateFormat sdfr = new SimpleDateFormat("dd-MM-yyyy");
+        messageBuffer+=msg.getMessage();
+        messageBuffer+="\n";
 
-        try{
-            dateString = sdfr.format(msg.getTimestamp().toDate());
-        }catch (Exception ex ){
-            System.out.println(ex);
+    }
+
+    public static void writeBuffer(){
+
+        try {
+            // 3rd parameter boolean append = true
+            FileUtils.writeStringToFile(file, messageBuffer, true);
+
+        } catch (IOException e) {
+            e.printStackTrace();
         }
 
-        BufferedWriter bw = null;
-        String full_file_name = this.output_folder + "/" + this.file_name + "_" + dateString;
-        try {
-            // APPEND MODE SET HERE
-            bw = new BufferedWriter(new FileWriter(full_file_name, true));
-            bw.write(msg.getMessage());
-            bw.newLine();
-            bw.flush();
-        } catch (IOException ioe) {
-            ioe.printStackTrace();
-        } finally {                       // always close the file
-            if (bw != null) try {
-                bw.close();
-            } catch (IOException ioe2) {
-                // just ignore it
-            }
-        } // end try/catch/finally
-
+        messageBuffer="";
 
     }
 
@@ -127,8 +138,17 @@ public class FileOutput implements MessageOutput{
             final ConfigurationRequest configurationRequest = new ConfigurationRequest();
             configurationRequest.addField(new TextField("output_folder", "Output folder in which the output file will be written.", "/tmp/", "Output folder in which the output file will be written.", ConfigurationField.Optional.NOT_OPTIONAL));
             configurationRequest.addField(new TextField("file_name", "File's name in which the output will be written", "file_output", "File's name in which the output will be written", ConfigurationField.Optional.NOT_OPTIONAL));
+            configurationRequest.addField(new TextField("flush_time", "Flush period time in seconds.", "3", "Flush time period/interval", ConfigurationField.Optional.NOT_OPTIONAL));
+
             return configurationRequest;
         }
     }
 
+}
+
+
+class WriteBuffer extends TimerTask {
+    public void run() {
+        FileOutput.writeBuffer();
+    }
 }
