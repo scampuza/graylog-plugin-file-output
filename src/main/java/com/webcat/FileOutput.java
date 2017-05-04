@@ -5,6 +5,7 @@ import org.graylog2.plugin.Message;
 import org.graylog2.plugin.configuration.Configuration;
 import org.graylog2.plugin.configuration.ConfigurationRequest;
 import org.graylog2.plugin.configuration.fields.ConfigurationField;
+import org.graylog2.plugin.configuration.fields.NumberField;
 import org.graylog2.plugin.configuration.fields.TextField;
 import org.graylog2.plugin.outputs.MessageOutput;
 import org.graylog2.plugin.streams.Stream;
@@ -53,6 +54,8 @@ public class FileOutput implements MessageOutput{
     static private String messageBuffer;
     static private Timer timer;
 
+    private WriteBuffer wb;
+
 
     @Inject
     public FileOutput(@Assisted Stream stream , @Assisted Configuration conf){
@@ -61,13 +64,14 @@ public class FileOutput implements MessageOutput{
         file_name = conf.getString("file_name");
         full_file_name = this.output_folder + "/" + this.file_name ; //+ "_" + dateString;
         file = new File(full_file_name);
-        flush_time = Integer.getInteger(conf.getString("flush_time"));
+        flush_time = conf.getInt("flush_time");
         shutdown = false;
         bw = null;
         messageBuffer="";
 
         timer = new Timer();
-        timer.scheduleAtFixedRate(new WriteBuffer(), 0, flush_time * 1000);
+        wb = new WriteBuffer(this);
+        timer.scheduleAtFixedRate(wb, 0, flush_time * 1000);
 
     }
 
@@ -101,7 +105,7 @@ public class FileOutput implements MessageOutput{
 
     }
 
-    public static void writeBuffer(){
+    public void writeBuffer(){
 
         try {
             // 3rd parameter boolean append = true
@@ -138,7 +142,7 @@ public class FileOutput implements MessageOutput{
             final ConfigurationRequest configurationRequest = new ConfigurationRequest();
             configurationRequest.addField(new TextField("output_folder", "Output folder in which the output file will be written.", "/tmp/", "Output folder in which the output file will be written.", ConfigurationField.Optional.NOT_OPTIONAL));
             configurationRequest.addField(new TextField("file_name", "File's name in which the output will be written", "file_output", "File's name in which the output will be written", ConfigurationField.Optional.NOT_OPTIONAL));
-            configurationRequest.addField(new TextField("flush_time", "Flush period time in seconds.", "3", "Flush time period/interval", ConfigurationField.Optional.NOT_OPTIONAL));
+            configurationRequest.addField(new NumberField("flush_time", "Flush period time in seconds.", 3, "Flush time period/interval", ConfigurationField.Optional.NOT_OPTIONAL));
 
             return configurationRequest;
         }
@@ -148,7 +152,12 @@ public class FileOutput implements MessageOutput{
 
 
 class WriteBuffer extends TimerTask {
+
+
+    private FileOutput fo;
+    public WriteBuffer(FileOutput fo){super(); this.fo=fo; if(fo != null) {System.out.println("Here!");}}
     public void run() {
-        FileOutput.writeBuffer();
+
+        fo.writeBuffer();
     }
 }
