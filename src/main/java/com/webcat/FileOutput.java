@@ -10,13 +10,16 @@ import org.graylog2.plugin.configuration.fields.TextField;
 import org.graylog2.plugin.outputs.MessageOutput;
 import org.graylog2.plugin.streams.Stream;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.StringTokenizer;
 import java.util.Map.Entry;
 import java.util.logging.Level;
-import java.util.logging.Logger;
+
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -54,23 +57,39 @@ public class FileOutput implements MessageOutput{
     static private String messageBuffer;
     static private Timer timer;
 
+    private static final String CK_OUTPUT_FOLDER = "output_folder";
+    private static final String CK_OUTPUT_FILE = "output_file";
+    private static final String CK_FLUSH_TIME = "flush_time";
+    private static final Logger LOG = LoggerFactory.getLogger(FileOutput.class);
     private WriteBuffer wb;
 
 
     @Inject
     public FileOutput(@Assisted Stream stream , @Assisted Configuration conf){
 
-        output_folder = conf.getString("output_folder");
-        file_name = conf.getString("file_name");
-        full_file_name = this.output_folder + "/" + this.file_name ; //+ "_" + dateString;
+        output_folder = conf.getString(CK_OUTPUT_FOLDER);
+        file_name = conf.getString(CK_OUTPUT_FILE);
+        full_file_name = this.output_folder + "/" + this.file_name ;
         file = new File(full_file_name);
-        flush_time = conf.getInt("flush_time");
+        try {
+            flush_time = conf.getInt(CK_FLUSH_TIME);
+        } catch (Exception e) {
+
+        }
+        if(flush_time==null){flush_time=5;}
+
         shutdown = false;
         bw = null;
         messageBuffer="";
 
         timer = new Timer();
         wb = new WriteBuffer(this);
+
+        LOG.info(" File Output Plugin has been configured with the following parameters:");
+        LOG.info(CK_OUTPUT_FOLDER + " : " + output_folder );
+        LOG.info(CK_OUTPUT_FILE + " : " + file_name );
+        LOG.info(CK_FLUSH_TIME + " : " + flush_time );
+
         timer.scheduleAtFixedRate(wb, 0, flush_time * 1000);
 
     }
@@ -140,9 +159,23 @@ public class FileOutput implements MessageOutput{
         @Override
         public ConfigurationRequest getRequestedConfiguration() {
             final ConfigurationRequest configurationRequest = new ConfigurationRequest();
-            configurationRequest.addField(new TextField("output_folder", "Output folder in which the output file will be written.", "/tmp/", "Output folder in which the output file will be written.", ConfigurationField.Optional.NOT_OPTIONAL));
-            configurationRequest.addField(new TextField("file_name", "File's name in which the output will be written", "file_output", "File's name in which the output will be written", ConfigurationField.Optional.NOT_OPTIONAL));
-            configurationRequest.addField(new NumberField("flush_time", "Flush period time in seconds.", 3, "Flush time period/interval", ConfigurationField.Optional.NOT_OPTIONAL));
+            configurationRequest.addField(new TextField(CK_OUTPUT_FOLDER,
+                    "Output folder in which the output file will be written.",
+                    "/tmp/", "Output folder in which the output file will be written.",
+                    ConfigurationField.Optional.NOT_OPTIONAL)
+            );
+            configurationRequest.addField(new TextField(CK_OUTPUT_FILE,
+                    "File's name in which the output will be written",
+                    "file_output",
+                    "File's name in which the output will be written",
+                    ConfigurationField.Optional.NOT_OPTIONAL)
+            );
+            configurationRequest.addField(new NumberField(CK_FLUSH_TIME,
+                    "Flush period time in seconds.",
+                    15,
+                    "Flush time period/interval",
+                    ConfigurationField.Optional.NOT_OPTIONAL)
+            );
 
             return configurationRequest;
         }
@@ -155,7 +188,7 @@ class WriteBuffer extends TimerTask {
 
 
     private FileOutput fo;
-    public WriteBuffer(FileOutput fo){super(); this.fo=fo; if(fo != null) {System.out.println("Here!");}}
+    public WriteBuffer(FileOutput fo){super(); this.fo=fo; }
     public void run() {
 
         fo.writeBuffer();
