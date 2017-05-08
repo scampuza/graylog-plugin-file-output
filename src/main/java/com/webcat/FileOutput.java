@@ -47,43 +47,33 @@ import com.google.inject.assistedinject.Assisted;
 public class FileOutput implements MessageOutput{
 
     private boolean shutdown;
+    private File file;
+    private String messageBuffer;
 
-    static private String output_folder;
-    static private String file_name;
-    static private BufferedWriter bw;
-    static private String full_file_name;
-    static private File file;
-    static private Integer flush_time;
-    static private String messageBuffer;
-    static private Timer timer;
 
     private static final String CK_OUTPUT_FOLDER = "output_folder";
     private static final String CK_OUTPUT_FILE = "output_file";
     private static final String CK_FLUSH_TIME = "flush_time";
     private static final Logger LOG = LoggerFactory.getLogger(FileOutput.class);
-    private WriteBuffer wb;
-
 
     @Inject
     public FileOutput(@Assisted Stream stream , @Assisted Configuration conf){
 
-        output_folder = conf.getString(CK_OUTPUT_FOLDER);
-        file_name = conf.getString(CK_OUTPUT_FILE);
-        full_file_name = this.output_folder + "/" + this.file_name ;
+        String output_folder = conf.getString(CK_OUTPUT_FOLDER);
+        String file_name = conf.getString(CK_OUTPUT_FILE);
+        String full_file_name = output_folder + "/" + file_name ;
         file = new File(full_file_name);
+        Integer flush_time=5;
         try {
             flush_time = conf.getInt(CK_FLUSH_TIME);
         } catch (Exception e) {
-
         }
-        if(flush_time==null){flush_time=5;}
 
         shutdown = false;
-        bw = null;
         messageBuffer="";
 
-        timer = new Timer();
-        wb = new WriteBuffer(this);
+        Timer timer = new Timer();
+        WriteBuffer wb = new WriteBuffer(this);
 
         LOG.info(" File Output Plugin has been configured with the following parameters:");
         LOG.info(CK_OUTPUT_FOLDER + " : " + output_folder );
@@ -128,7 +118,7 @@ public class FileOutput implements MessageOutput{
 
         try {
             // 3rd parameter boolean append = true
-            FileUtils.writeStringToFile(file, messageBuffer, true);
+                FileUtils.writeStringToFile(file, messageBuffer, true);
 
         } catch (IOException e) {
             e.printStackTrace();
