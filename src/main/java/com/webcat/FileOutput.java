@@ -108,7 +108,8 @@ public class FileOutput implements MessageOutput{
         if (shutdown) {
             return;
         }
-
+        messageBuffer+=msg.getTimestamp() + " - ";
+        messageBuffer+=msg.getSource() + ": ";
         messageBuffer+=msg.getMessage();
         messageBuffer+="\n";
 
